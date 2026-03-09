@@ -89,11 +89,11 @@ export const DEFAULT_SKY_ADS: SkyAd[] = [
   // ── Planes ──
   {
     id: "solcity-main",
-    text: "SOLCITY ★ YOUR WALLET. YOUR CITY. YOUR LEGACY. ★ SOLCITY.IO",
+    text: "SOLCITY ★ Visualizing the Solana Skyline ★ SOLCITY.CITY",
     brand: "SolCity",
     color: "#ff69c7",
     bgColor: "#1a0a18",
-    link: "https://solcity.io",
+    link: "https://solcity.city",
     vehicle: "plane",
     priority: 100,
   },

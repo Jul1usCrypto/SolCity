@@ -12,9 +12,9 @@ export const metadata: Metadata = {
         ? `https://${process.env.VERCEL_URL}`
         : "http://localhost:3000")
   ),
-  title: "SolCity — Your Wallet as a 3D City",
+  title: "SolCity — Visualizing the Solana Skyline",
   description:
-    "Your Solana wallet activity transformed into a living 3D cyberpunk city. Verify your wallet, explore your skyline, and flex your on-chain stats.",
+    "Your Solana wallet activity transformed into a living 3D cyberpunk city. Visualizing the Solana Skyline.",
   keywords: [
     "solana",
     "3d city",
@@ -27,9 +27,9 @@ export const metadata: Metadata = {
     "meme coins",
   ],
   openGraph: {
-    title: "SolCity — Your Wallet as a 3D City",
+    title: "SolCity — Visualizing the Solana Skyline",
     description:
-      "Your Solana wallet activity transformed into a living 3D cyberpunk city. Verify your wallet, explore your skyline, and flex your on-chain stats.",
+      "Your Solana wallet activity transformed into a living 3D cyberpunk city. Visualizing the Solana Skyline.",
     siteName: "SolCity",
     type: "website",
     locale: "en_US",
@@ -57,7 +57,7 @@ const jsonLd = {
   "@type": "WebApplication",
   name: "SolCity",
   description:
-    "Your Solana wallet activity transformed into a living 3D cyberpunk city",
+    "Visualizing the Solana Skyline — your wallet activity as a living 3D cyberpunk city",
   url: BASE_URL,
   applicationCategory: "FinanceApplication",
   operatingSystem: "Web",

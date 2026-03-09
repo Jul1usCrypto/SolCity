@@ -458,7 +458,7 @@ export default function Home() {
   // Generate tweet text
   const tweetText = useMemo(() => {
     const addr = shortenAddr(walletAddress);
-    return encodeURIComponent(`I just deployed my wallet ${addr} on the Solana skyline! 🏙️\n\nCheck out @SolC1ty — your wallet, your city, your legacy.\n\nhttps://solcity.io`);
+    return encodeURIComponent(`I just deployed my wallet ${addr} on the Solana skyline! 🏙️\n\nCheck out @SolC1ty — Visualizing the Solana Skyline\n\nhttps://solcity.city`);
   }, [walletAddress]);
 
   const hudVisible = showHud && !selectedBuilding && !showVerifyPanel && !isFlyMode;
@@ -637,8 +637,8 @@ export default function Home() {
             <NeonText color="#ff69c7">SOL</NeonText>
             <NeonText color="#ffe45c">CITY</NeonText>
           </h1>
-          <p className="font-pixel text-[9px] sm:text-[10px] text-muted/80 tracking-[0.25em] uppercase mb-5">
-            YOUR WALLET. YOUR CITY. YOUR LEGACY.
+          <p className="font-pixel text-[11px] sm:text-[13px] font-bold text-cream/90 tracking-[0.25em] uppercase mb-5" style={{ textShadow: '0 0 10px #ff69c740, 0 0 20px #ff69c720' }}>
+            Visualizing the Solana Skyline
           </p>
 
           {/* Wallet Input */}
