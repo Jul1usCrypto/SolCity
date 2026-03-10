@@ -33,9 +33,11 @@ export const metadata: Metadata = {
     siteName: "SolCity",
     type: "website",
     locale: "en_US",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "SolCity — Visualizing the Solana Skyline" }],
   },
   twitter: {
     card: "summary_large_image",
+    images: ["/og-image.png"],
   },
   icons: {
     icon: [
