@@ -338,10 +338,17 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Intro sequence: starts after splash ends + city loaded
+  // Intro sequence: starts after splash ends + city loaded (first visit only)
   useEffect(() => {
     if (!splashDone || !cityPreview) return;
     if (introActive || introSlide > 3) return; // already running or done
+    // Skip intro if user has seen it before
+    try {
+      if (localStorage.getItem("solcity-intro-seen")) {
+        setIntroSlide(4); // mark as done
+        return;
+      }
+    } catch {}
     setIntroActive(true);
     setIntroSlide(0);
     // Slide timings: 0→2.5s, 1→2.5s, 2→2.5s, 3(welcome)→3.5s, then fade
@@ -349,7 +356,7 @@ export default function Home() {
     const t2 = setTimeout(() => setIntroSlide(2), 5000);
     const t3 = setTimeout(() => setIntroSlide(3), 7500);
     const t4 = setTimeout(() => setIntroFading(true), 11000);
-    const t5 = setTimeout(() => { setIntroActive(false); setIntroSlide(4); setIntroFading(false); }, 11800);
+    const t5 = setTimeout(() => { setIntroActive(false); setIntroSlide(4); setIntroFading(false); try { localStorage.setItem("solcity-intro-seen", "1"); } catch {} }, 11800);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
   }, [splashDone, cityPreview, introActive, introSlide]);
 
@@ -600,11 +607,12 @@ export default function Home() {
         <>
           {/* SKIP button — top right */}
           <button
-            onClick={() => { setIntroActive(false); setIntroSlide(4); setIntroFading(false); }}
+            onClick={() => { setIntroActive(false); setIntroSlide(4); setIntroFading(false); try { localStorage.setItem("solcity-intro-seen", "1"); } catch {} }}
             className="fixed top-4 right-4 z-[95] font-pixel text-[10px] text-dim/70 hover:text-cream transition-colors pointer-events-auto tracking-widest"
           >
             SKIP ▸
           </button>
+          {/* Also mark as seen when skipping */}
 
           {/* Bottom bar with text slides */}
           <div
@@ -1522,7 +1530,7 @@ export default function Home() {
       {/* ═══ INTRO REPLAY BUTTON — bottom-left ═══ */}
       {!introActive && introSlide > 3 && !isFlyMode && cityPreview && (
         <button
-          onClick={() => { setIntroActive(false); setIntroSlide(-1); setIntroFading(false); }}
+          onClick={() => { try { localStorage.removeItem("solcity-intro-seen"); } catch {} setIntroActive(false); setIntroSlide(-1); setIntroFading(false); }}
           className="fixed bottom-3 left-3 z-50 btn-press font-pixel text-[8px] text-dim/60 hover:text-cream/80 transition-colors tracking-wider flex items-center gap-1 px-2 py-1.5 bg-bg/40 backdrop-blur-sm border border-border/20 rounded-sm"
           title="Replay intro"
         >
@@ -1540,9 +1548,13 @@ export default function Home() {
           <span className="text-[10px] sm:text-[11px] font-pixel text-cream/70">
             <span className="text-cream font-bold">{seedCity.length}</span> WALLETS
           </span>
-          <span className="text-[10px] sm:text-[11px] font-pixel text-cream/70 hidden sm:inline">
-            TOKEN CA: <span className="text-[#b44dff]">Coming Soon</span>
-          </span>
+          <button
+            onClick={() => { navigator.clipboard.writeText("73hqTnc95a1Tjb5mwsmHu9CFUKqHngh7u6BmunFxpump"); setCopied("ca"); setTimeout(() => setCopied(""), 1500); }}
+            className="text-[10px] sm:text-[11px] font-pixel text-cream/70 hidden sm:inline pointer-events-auto hover:text-cream transition-colors cursor-pointer"
+            title="Click to copy CA"
+          >
+            CA: <span className="text-[#b44dff]">{copied === "ca" ? "COPIED!" : "73hq...pump"}</span>
+          </button>
         </div>
       </div>
     </main>
