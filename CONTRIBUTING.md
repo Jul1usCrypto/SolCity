@@ -1,12 +1,12 @@
-# Contributing to Git City
+# Contributing to SolCity
 
 Thanks for your interest in contributing! Here's how to get started.
 
 ## Setup
 
 ```bash
-git clone https://github.com/srizzon/git-city.git
-cd git-city
+git clone https://github.com/Jul1usCrypto/SolCity.git
+cd SolCity
 npm install
 cp .env.example .env.local
 # Fill in your keys (see .env.example for details)
@@ -19,7 +19,7 @@ The app runs on [http://localhost:3001](http://localhost:3001).
 
 - Node.js 18+
 - A Supabase project (free tier works)
-- A GitHub personal access token (for API calls)
+- A Helius API key (for Solana RPC calls)
 - Stripe test keys (only if working on payments)
 
 ## Environment Variables
@@ -94,7 +94,7 @@ Start with an emoji + type. Single line, present tense, concise.
 
 ## Good First Issues
 
-Look for issues labeled [`good first issue`](https://github.com/srizzon/git-city/labels/good%20first%20issue). These are scoped tasks that don't require deep knowledge of the codebase.
+Look for issues labeled [`good first issue`](https://github.com/Jul1usCrypto/SolCity/labels/good%20first%20issue). These are scoped tasks that don't require deep knowledge of the codebase.
 
 ## Project Structure
 
@@ -134,4 +134,4 @@ Run `npm install` to pick up any new dependencies, then `npm run lint` to surfac
 
 ## Questions?
 
-Open an issue or reach out on [X/Twitter](https://x.com/samuelrizzondev).
+Open an issue or reach out on [X/Twitter](https://x.com/SolC1ty).

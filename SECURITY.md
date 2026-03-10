@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Git City is actively developed. Security fixes are applied to the latest version on `main`.
+SolCity is actively developed. Security fixes are applied to the latest version on `main`.
 
 | Version | Supported          |
 | ------- | ------------------ |
@@ -11,17 +11,17 @@ Git City is actively developed. Security fixes are applied to the latest version
 
 ## Reporting a Vulnerability
 
-We take security seriously. If you discover a vulnerability in Git City, please **do not** open a public GitHub issue.
+We take security seriously. If you discover a vulnerability in SolCity, please **do not** open a public GitHub issue.
 
 ### How to Report
 
 Please report vulnerabilities by emailing the maintainer directly or using GitHub's private security advisory feature:
 
-1. Go to the [Security Advisories](https://github.com/srizzon/git-city/security/advisories) page
+1. Go to the [Security Advisories](https://github.com/Jul1usCrypto/SolCity/security/advisories) page
 2. Click **"Report a vulnerability"**
 3. Fill in the details of the issue
 
-Alternatively, you can reach out to the maintainer via [X/Twitter](https://x.com/samuelrizzondev).
+Alternatively, you can reach out to the team via [X/Twitter](https://x.com/SolC1ty).
 
 ### What to Include
 
@@ -34,9 +34,9 @@ Please include as much of the following information as possible to help us under
 
 ## Sensitive Areas
 
-Git City handles the following sensitive data — please pay special attention when auditing:
+SolCity handles the following sensitive data — please pay special attention when auditing:
 
-- **GitHub OAuth tokens** — used for authentication via Supabase
+- **Helius API keys** — used for Solana RPC calls
 - **Supabase Row Level Security (RLS)** — controls data access per user
 - **Stripe payment webhooks** — handles payment events
 - **API routes** — under `src/app/api/` — ensure proper authentication checks
@@ -56,4 +56,4 @@ We follow a **coordinated disclosure** model. Once a fix is available, we will:
 2. Credit the reporter (unless they wish to remain anonymous)
 3. Release a patched version
 
-Thank you for helping keep Git City and its users safe!
+Thank you for helping keep SolCity and its users safe!
