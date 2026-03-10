@@ -2,14 +2,14 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Git City",
-    short_name: "Git City",
+    name: "SolCity",
+    short_name: "SolCity",
     description:
-      "Explore GitHub users as buildings in a 3D pixel art city. Fly through the city and discover developers.",
+      "Your Solana wallet activity transformed into a living 3D cyberpunk city. Visualizing the Solana Skyline.",
     start_url: "/",
     display: "standalone",
-    background_color: "#0d1117",
-    theme_color: "#4ADE80",
+    background_color: "#0a0a0f",
+    theme_color: "#ff69c7",
     icons: [
       {
         src: "/icon-192.png",

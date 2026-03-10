@@ -6,7 +6,7 @@ import type { WalletMetrics } from "@/lib/solana";
 type SortKey = "pnl" | "degen" | "volume" | "trades" | "winRate" | "tokens";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "pnl", label: "PNL" },
+  { key: "pnl", label: "PNL (ALL-TIME)" },
   { key: "degen", label: "DEGEN" },
   { key: "volume", label: "VOLUME" },
   { key: "trades", label: "TRADES" },

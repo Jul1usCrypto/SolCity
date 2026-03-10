@@ -129,6 +129,10 @@ export default function Home() {
   const [showHud, setShowHud] = useState(true);
   const [showAdsPanel, setShowAdsPanel] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
+  const [introActive, setIntroActive] = useState(false);
+  const [introSlide, setIntroSlide] = useState(-1);
+  const [introFading, setIntroFading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [copied, setCopied] = useState("");
   const [deployComplete, setDeployComplete] = useState(false);
   const [showNicknamePrompt, setShowNicknamePrompt] = useState(false);
@@ -315,13 +319,39 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
+  // Mobile detection
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   // Splash screen: minimum 3 seconds before fading out
   // Reset on every mount (including HMR Fast Refresh)
   useEffect(() => {
     setSplashDone(false);
+    setIntroActive(false);
+    setIntroSlide(-1);
+    setIntroFading(false);
     const timer = setTimeout(() => setSplashDone(true), 3000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Intro sequence: starts after splash ends + city loaded
+  useEffect(() => {
+    if (!splashDone || !cityPreview) return;
+    if (introActive || introSlide > 3) return; // already running or done
+    setIntroActive(true);
+    setIntroSlide(0);
+    // Slide timings: 0→2.5s, 1→2.5s, 2→2.5s, 3(welcome)→3.5s, then fade
+    const t1 = setTimeout(() => setIntroSlide(1), 2500);
+    const t2 = setTimeout(() => setIntroSlide(2), 5000);
+    const t3 = setTimeout(() => setIntroSlide(3), 7500);
+    const t4 = setTimeout(() => setIntroFading(true), 11000);
+    const t5 = setTimeout(() => { setIntroActive(false); setIntroSlide(4); setIntroFading(false); }, 11800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
+  }, [splashDone, cityPreview, introActive, introSlide]);
 
   // Load nicknames from localStorage
   useEffect(() => {
@@ -473,7 +503,7 @@ export default function Home() {
     return encodeURIComponent(`I just deployed my wallet ${addr} on the Solana skyline! 🏙️\n\nCheck out @SolC1ty — Visualizing the Solana Skyline\n\nhttps://solcity.city`);
   }, [walletAddress]);
 
-  const hudVisible = showHud && !selectedBuilding && !showVerifyPanel && !isFlyMode;
+  const hudVisible = showHud && !selectedBuilding && !showVerifyPanel && !isFlyMode && !introActive;
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-[#0a0a0f]">
@@ -491,6 +521,8 @@ export default function Home() {
             flyMode={isFlyMode}
             onExitFly={() => setIsFlyMode(false)}
             themeIndex={1}
+            introMode={introActive}
+            onIntroEnd={() => { setIntroActive(false); setIntroSlide(4); setIntroFading(false); }}
             focusedBuilding={focusedBuildingLogin}
             skyAds={DEFAULT_SKY_ADS}
             onCollect={() => {}}
@@ -563,8 +595,86 @@ export default function Home() {
         <style>{`@keyframes loadbar { 0% { width: 0%; } 50% { width: 80%; } 100% { width: 100%; } }`}</style>
       </div>
 
+      {/* ═══ INTRO TEXT OVERLAY ═══ */}
+      {introActive && introSlide >= 0 && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center pointer-events-none transition-opacity duration-700"
+          style={{ opacity: introFading ? 0 : 1 }}
+        >
+          <div className="text-center px-6">
+            {introSlide === 0 && (
+              <p className="font-pixel text-base sm:text-xl md:text-2xl text-cream/90 tracking-wider animate-fade-in-up"
+                style={{ textShadow: "0 0 20px #ff69c760, 0 0 40px #ff69c730" }}>
+                On-Chain metrics completely reimagined
+              </p>
+            )}
+            {introSlide === 1 && (
+              <p className="font-pixel text-base sm:text-xl md:text-2xl text-cream/90 tracking-wider animate-fade-in-up"
+                style={{ textShadow: "0 0 20px #b44dff60, 0 0 40px #b44dff30" }}>
+                Every wallet leaves a mark
+              </p>
+            )}
+            {introSlide === 2 && (
+              <p className="font-pixel text-base sm:text-xl md:text-2xl tracking-wider animate-fade-in-up"
+                style={{ color: "#14f195", textShadow: "0 0 20px #14f19560, 0 0 40px #14f19530" }}>
+                We are painting the Solana skyline
+              </p>
+            )}
+            {introSlide === 3 && (
+              <div className="animate-fade-in-up">
+                <p className="font-pixel text-[13px] sm:text-[15px] text-dim tracking-[0.3em] uppercase mb-3">Welcome To</p>
+                <h1 className="font-pixel text-4xl sm:text-6xl md:text-7xl tracking-[0.15em]">
+                  <span style={{ color: "#ff69c7", textShadow: "0 0 30px #ff69c780, 0 0 60px #ff69c740" }}>SOL</span>
+                  <span style={{ color: "#ffe45c", textShadow: "0 0 30px #ffe45c80, 0 0 60px #ffe45c40" }}>CITY</span>
+                </h1>
+              </div>
+            )}
+          </div>
+          <style>{`
+            @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+            .animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; }
+          `}</style>
+        </div>
+      )}
+
+      {/* ═══ TOP 5 LEADERBOARD (desktop only, not during intro/fly/splash) ═══ */}
+      {!isMobile && !introActive && !isFlyMode && cityPreview && splashDone && introSlide > 3 && !showDatabase && (
+        <div className="fixed top-14 left-4 z-40 transition-opacity duration-500" style={{ opacity: hudVisible || (!showVerifyPanel && !showHowItWorks && !showAdsPanel) ? 0.95 : 0 }}>
+          <div className="bg-bg/70 backdrop-blur-md border border-border/30 rounded-sm p-2.5 min-w-[200px]">
+            {seedCity
+              .slice()
+              .sort((a, b) => b.pnlUsd - a.pnlUsd)
+              .slice(0, 5)
+              .map((w, i) => {
+                const colors = ["#ffe45c", "#c0c0c0", "#cd7f32", "#ff69c7", "#b44dff"];
+                return (
+                  <button
+                    key={w.address}
+                    onClick={() => { setFocusedBuildingLogin(w.address); setSelectedBuilding(w); setShowHud(false); }}
+                    className="flex items-center gap-2 w-full text-left py-1.5 px-1 hover:bg-white/5 transition-colors rounded-sm"
+                  >
+                    <span className="font-pixel text-[9px] font-bold w-5" style={{ color: colors[i] }}>#{i + 1}</span>
+                    <span className="font-pixel text-[9px] text-cream truncate flex-1">
+                      {w.name || shortenAddr(w.address)}
+                    </span>
+                    <span className="font-pixel text-[8px]" style={{ color: w.pnlUsd >= 0 ? "#14f195" : "#ff2d95" }}>
+                      {w.pnlUsd >= 0 ? "+$" : "-$"}{Math.abs(w.pnlUsd) >= 1000 ? `${(Math.abs(w.pnlUsd) / 1000).toFixed(0)}K` : Math.abs(w.pnlUsd).toFixed(0)}
+                    </span>
+                  </button>
+                );
+              })}
+            <button
+              onClick={() => { setShowDatabase(true); setSelectedBuilding(null); setShowHud(false); }}
+              className="font-pixel text-[8px] text-[#b44dff]/70 hover:text-[#b44dff] transition-colors mt-1 w-full text-center tracking-wider"
+            >
+              SHOW ALL ▸
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ═══ TOP NAV BAR ═══ */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 py-2.5 bg-bg/50 backdrop-blur-md border-b border-border/30 transition-all duration-300 ${isFlyMode ? "opacity-0 pointer-events-none -translate-y-full" : "opacity-100"}`}>
+      <nav className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 py-2.5 bg-bg/50 backdrop-blur-md border-b border-border/30 transition-all duration-300 ${(isFlyMode || introActive) ? "opacity-0 pointer-events-none -translate-y-full" : "opacity-100"}`}>
         <button
           onClick={() => { setShowHud(true); setSelectedBuilding(null); setFocusedBuildingLogin(null); setShowVerifyPanel(false); setShowHowItWorks(false); }}
           className="flex items-center gap-1 hover:opacity-80 transition-opacity"
@@ -656,13 +766,15 @@ export default function Home() {
             >
               📊 DATABASE
             </button>
-            <button
-              onClick={() => { setIsFlyMode(true); setShowHud(false); setSelectedBuilding(null); }}
-              className="btn-press flex-1 px-3 py-1.5 text-[8px] font-pixel font-bold text-black flex-shrink-0 rounded-sm"
-              style={{ background: "linear-gradient(135deg, #ff69c7, #ffe45c)" }}
-            >
-              ✈ FLY
-            </button>
+            {!isMobile && (
+              <button
+                onClick={() => { setIsFlyMode(true); setShowHud(false); setSelectedBuilding(null); }}
+                className="btn-press flex-1 px-3 py-1.5 text-[8px] font-pixel font-bold text-black flex-shrink-0 rounded-sm"
+                style={{ background: "linear-gradient(135deg, #ff69c7, #ffe45c)" }}
+              >
+                ✈ FLY
+              </button>
+            )}
           </div>
           {searchNotFound && (
             <p className="text-[9px] font-pixel text-[#ff2d95] text-center mt-1 animate-pulse">WALLET NOT FOUND IN CITY</p>
@@ -776,13 +888,15 @@ export default function Home() {
             >
               ADs
             </button>
-            <button
-              onClick={() => setIsFlyMode(true)}
-              className="btn-press px-4 py-2 text-[10px] sm:text-[11px] font-pixel font-bold text-[#ff2d95] hover:bg-[#ff2d95]/15 transition-all"
-              style={{ border: "2px solid #ff2d9560", background: "rgba(10,10,15,0.6)", backdropFilter: "blur(4px)" }}
-            >
-              FLY
-            </button>
+            {!isMobile && (
+              <button
+                onClick={() => setIsFlyMode(true)}
+                className="btn-press px-4 py-2 text-[10px] sm:text-[11px] font-pixel font-bold text-[#ff2d95] hover:bg-[#ff2d95]/15 transition-all"
+                style={{ border: "2px solid #ff2d9560", background: "rgba(10,10,15,0.6)", backdropFilter: "blur(4px)" }}
+              >
+                FLY
+              </button>
+            )}
           </div>
 
           {/* Live stats — bigger and more readable */}
@@ -1079,19 +1193,29 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ═══ BUILDING INFO PANEL — slide-in from right (like GitCity) ═══ */}
+      {/* ═══ BUILDING INFO PANEL — right slide (desktop) / bottom sheet (mobile) ═══ */}
       <div
-        className={`fixed top-0 right-0 bottom-0 w-full max-w-sm z-[60] transform transition-transform duration-300 ease-out ${
-          selectedBuilding ? "translate-x-0" : "translate-x-full"
+        className={`fixed z-[60] transform transition-transform duration-300 ease-out ${
+          isMobile
+            ? `left-0 right-0 bottom-0 max-h-[65vh] ${selectedBuilding ? "translate-y-0" : "translate-y-full"}`
+            : `top-0 right-0 bottom-0 w-full max-w-sm ${selectedBuilding ? "translate-x-0" : "translate-x-full"}`
         }`}
       >
-        <div className="h-full bg-bg-card/95 backdrop-blur-lg border-l border-border/50 overflow-y-auto pt-16 pb-8 px-5">
+        <div className={`bg-bg-card/95 backdrop-blur-lg overflow-y-auto px-5 ${
+          isMobile
+            ? "rounded-t-xl border-t border-border/50 pt-4 pb-6 max-h-[65vh]"
+            : "h-full border-l border-border/50 pt-16 pb-8"
+        }`}>
           <button
             onClick={() => { setSelectedBuilding(null); setFocusedBuildingLogin(null); setShowHud(true); setEditingNickname(false); }}
-            className="absolute top-14 right-4 font-pixel text-[10px] text-dim hover:text-cream transition-colors"
+            className={`font-pixel text-[10px] text-dim hover:text-cream transition-colors ${
+              isMobile ? "absolute top-3 right-4" : "absolute top-14 right-4"
+            }`}
           >
-            ESC CLOSE
+            {isMobile ? "✕" : "ESC CLOSE"}
           </button>
+          {/* Mobile drag indicator */}
+          {isMobile && <div className="w-10 h-1 bg-border/50 rounded-full mx-auto mb-3" />}
 
           {selectedBuilding && (
             <>

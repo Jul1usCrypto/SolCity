@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const alt = "Git City - Your GitHub as a 3D City";
+export const alt = "SolCity — Visualizing the Solana Skyline";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -11,12 +11,12 @@ export default async function Image() {
     join(process.cwd(), "public/fonts/Silkscreen-Regular.ttf")
   );
 
-  const accent = "#c8e64a";
-  const bg = "#0d0d0f";
-  const cream = "#e8dcc8";
-  const border = "#2a2a30";
-  const cardBg = "#1c1c20";
-  const muted = "#8c8c9c";
+  const accent = "#ff69c7";
+  const bg = "#0a0a0f";
+  const cream = "#ffe45c";
+  const border = "#2a1a30";
+  const cardBg = "#1a1020";
+  const muted = "#b44dff";
 
   // Window rendering (same as compare)
   const WSIZE = 20;
@@ -104,8 +104,8 @@ export default async function Image() {
               textTransform: "uppercase",
             }}
           >
-            <span style={{ fontSize: 110, color: cream }}>GIT</span>
-            <span style={{ fontSize: 110, color: accent }}>CITY</span>
+            <span style={{ fontSize: 110, color: "#ff69c7" }}>SOL</span>
+            <span style={{ fontSize: 110, color: "#ffe45c" }}>CITY</span>
           </div>
           <div
             style={{
@@ -116,8 +116,8 @@ export default async function Image() {
               gap: 10,
             }}
           >
-            <span style={{ color: muted }}>Where code</span>
-            <span style={{ color: accent }}>builds cities</span>
+            <span style={{ color: muted }}>Visualizing the</span>
+            <span style={{ color: accent }}>Solana Skyline</span>
           </div>
         </div>
 
@@ -210,7 +210,7 @@ export default async function Image() {
               color: muted,
             }}
           >
-            by @samuelrizzondev
+            @SolC1ty
           </div>
         </div>
       </div>
