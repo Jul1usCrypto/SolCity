@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { generateCityLayout, type DeveloperRecord, type CityBuilding } from "@/lib/github";
 import { DEFAULT_SKY_ADS } from "@/lib/skyAds";
+import DatabasePanel from "@/components/DatabasePanel";
 
 /* ─── Wallet Metrics Types ─────────────────────────────────── */
 interface WalletMetrics {
@@ -16,11 +17,14 @@ interface WalletMetrics {
   volumeEstimate: number;
   swapCount: number;
   uniqueTokensTraded: number;
-  pnlEstimate: number;
+  pnlUsd: number;
+  realizedPnlUsd: number;
   winRate: number;
+  totalTrades: number;
   avgHoldTime: string;
   rugsSurvived: number;
   degenScore: number;
+  pnlIsReal: boolean;
   citySize: number;
   skyscraperHeight: number;
   buildingCount: number;
@@ -124,6 +128,7 @@ export default function Home() {
   const [nicknameInput, setNicknameInput] = useState("");
   const [showHud, setShowHud] = useState(true);
   const [showAdsPanel, setShowAdsPanel] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
   const [copied, setCopied] = useState("");
   const [deployComplete, setDeployComplete] = useState(false);
   const [showNicknamePrompt, setShowNicknamePrompt] = useState(false);
@@ -131,6 +136,8 @@ export default function Home() {
   const [verifyPolling, setVerifyPolling] = useState(false);
   const [exploreSearch, setExploreSearch] = useState("");
   const [searchNotFound, setSearchNotFound] = useState(false);
+  const [showDatabase, setShowDatabase] = useState(false);
+  const [adCart, setAdCart] = useState<{ id: string; name: string; price: number; days: number }[]>([]);
   const [verifyMessage, setVerifyMessage] = useState("");
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const walletDataRef = useRef<WalletMetrics | null>(null);
@@ -177,23 +184,18 @@ export default function Home() {
     } catch {}
   }, []);
 
+  const cityLayoutCacheRef = useRef<{ key: string; layout: ReturnType<typeof generateCityLayout> } | null>(null);
   const cityPreview = useMemo(() => {
     if (seedCity.length === 0) return null;
+    // Cache key: wallet count + first/last address to detect real data changes
+    const cacheKey = `${seedCity.length}:${seedCity[0]?.address}:${seedCity[seedCity.length - 1]?.address}`;
+    if (cityLayoutCacheRef.current?.key === cacheKey) return cityLayoutCacheRef.current.layout;
 
     const DISTRICTS = ["frontend", "backend", "fullstack", "data_ai", "devops", "mobile", "gamedev", "vibe_coder", "creator", "security"];
     const LANGS: Record<string, string> = { frontend: "JavaScript", backend: "Rust", fullstack: "TypeScript", data_ai: "Python", devops: "Shell", mobile: "Kotlin", gamedev: "GDScript", vibe_coder: "JavaScript", creator: "TypeScript", security: "Rust" };
 
-    // Real KOL wallets — varied boost based on wallet strength to prevent uniform max-height
-    const maxVol = Math.max(1, ...seedCity.map(w => w.volumeEstimate));
-    const maxTx = Math.max(1, ...seedCity.map(w => w.totalTransactions));
+    // Real KOL wallets — NO boost, 100% raw metrics from Helius/kolscan
     const kolDevs: DeveloperRecord[] = seedCity.map((wallet, idx) => {
-      // Dynamic boost 1.5–5 based on relative wallet strength
-      const volRatio = wallet.volumeEstimate / maxVol;
-      const txRatio = wallet.totalTransactions / maxTx;
-      const pnlFactor = wallet.pnlEstimate > 0 ? 1.0 : 0.6; // negative PnL = shorter building
-      const boost = 1.5 + (volRatio * 0.4 + txRatio * 0.4 + (wallet.degenScore / 100) * 0.2) * 3.5 * pnlFactor;
-      // Stars multiplier also factors in PnL — positive PnL = more "stars"
-      const pnlStarMult = wallet.pnlEstimate > 0 ? Math.min(30, 10 + wallet.pnlEstimate / 1000) : Math.max(3, 10 + wallet.pnlEstimate / 2000);
       return {
         id: idx + 1,
         github_login: wallet.address,
@@ -201,9 +203,9 @@ export default function Home() {
         name: wallet.name ?? null,
         avatar_url: null,
         bio: null,
-        contributions: Math.floor(wallet.totalTransactions * boost),
+        contributions: wallet.totalTransactions,
         public_repos: Math.max(5, wallet.tokenCount * 3),
-        total_stars: Math.max(10, Math.floor(wallet.volumeEstimate * pnlStarMult)),
+        total_stars: Math.max(10, Math.floor(wallet.volumeEstimate)),
         primary_language: wallet.hasNeonDistrict ? "JavaScript" : "TypeScript",
         rank: idx + 1,
         fetched_at: STABLE_ISO,
@@ -215,7 +217,7 @@ export default function Home() {
         owned_items: [],
         custom_color: null,
         billboard_images: [],
-        contributions_total: Math.floor(wallet.totalTransactions * boost),
+        contributions_total: wallet.totalTransactions,
         language_diversity: Math.max(3, wallet.districtCount * 2),
         total_prs: Math.floor(wallet.swapCount * 1.5),
         total_reviews: Math.floor(wallet.swapCount * 0.3),
@@ -283,7 +285,9 @@ export default function Home() {
       };
     });
 
-    return generateCityLayout([...kolDevs, ...fillerDevs]);
+    const layout = generateCityLayout([...kolDevs, ...fillerDevs]);
+    cityLayoutCacheRef.current = { key: cacheKey, layout };
+    return layout;
   }, [seedCity]);
 
   // Load seed city on mount — only fetch once, skip if already loaded
@@ -309,6 +313,14 @@ export default function Home() {
         }
       })
       .catch(() => {});
+  }, []);
+
+  // Splash screen: minimum 3 seconds before fading out
+  // Reset on every mount (including HMR Fast Refresh)
+  useEffect(() => {
+    setSplashDone(false);
+    const timer = setTimeout(() => setSplashDone(true), 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   // Load nicknames from localStorage
@@ -504,14 +516,52 @@ export default function Home() {
             }}
           />
         </div>
-      ) : (
-        <div className="absolute inset-0 z-0 flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block w-6 h-6 border-2 border-[#ff2d95] border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="font-pixel text-[10px] text-dim">LOADING CITY...</p>
-          </div>
+      ) : null}
+
+      {/* ═══ SPLASH / LOADING SCREEN ═══ */}
+      <div
+        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0a0a0f] transition-opacity duration-700"
+        style={{
+          opacity: (cityPreview && splashDone) ? 0 : 1,
+          pointerEvents: (cityPreview && splashDone) ? "none" : "auto",
+        }}
+      >
+        {/* Circular GIF — same style as hero section */}
+        <div
+          className="mb-5 rounded-full overflow-hidden border-2 flex-shrink-0"
+          style={{
+            width: 110,
+            height: 110,
+            borderColor: "#ff2d95",
+            boxShadow: "0 0 24px #ff2d9550, 0 0 48px #ff2d9520",
+          }}
+        >
+          <img
+            src="/solcity-hero.gif"
+            alt="SolCity"
+            width={110}
+            height={110}
+            className="w-full h-full object-cover"
+          />
         </div>
-      )}
+        <h1 className="font-pixel text-2xl sm:text-3xl tracking-[0.15em] mb-4">
+          <span style={{ color: "#ff69c7", textShadow: "0 0 20px #ff69c760, 0 0 40px #ff69c730" }}>SOL</span>
+          <span style={{ color: "#ffe45c", textShadow: "0 0 20px #ffe45c60, 0 0 40px #ffe45c30" }}>CITY</span>
+        </h1>
+        <div className="w-40 sm:w-56 h-1 bg-[#1a1520] rounded-full overflow-hidden mb-3">
+          <div
+            className="h-full rounded-full"
+            style={{
+              background: "linear-gradient(90deg, #ff69c7, #ffe45c)",
+              animation: "loadbar 2s ease-in-out infinite",
+            }}
+          />
+        </div>
+        <p className="font-pixel text-[9px] text-dim tracking-widest">
+          {cityPreview ? "ENTERING SKYLINE..." : "LOADING CITY..."}
+        </p>
+        <style>{`@keyframes loadbar { 0% { width: 0%; } 50% { width: 80%; } 100% { width: 100%; } }`}</style>
+      </div>
 
       {/* ═══ TOP NAV BAR ═══ */}
       <nav className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 py-2.5 bg-bg/50 backdrop-blur-md border-b border-border/30 transition-all duration-300 ${isFlyMode ? "opacity-0 pointer-events-none -translate-y-full" : "opacity-100"}`}>
@@ -519,8 +569,8 @@ export default function Home() {
           onClick={() => { setShowHud(true); setSelectedBuilding(null); setFocusedBuildingLogin(null); setShowVerifyPanel(false); setShowHowItWorks(false); }}
           className="flex items-center gap-1 hover:opacity-80 transition-opacity"
         >
-          <span className="font-pixel text-base sm:text-lg" style={{ color: "#ff2d95", textShadow: "0 0 8px #ff2d9540" }}>SOL</span>
-          <span className="font-pixel text-base sm:text-lg" style={{ color: "#b44dff", textShadow: "0 0 8px #b44dff40" }}>CITY</span>
+          <span className="font-pixel text-base sm:text-lg" style={{ color: "#ff69c7", textShadow: "0 0 12px #ff69c760" }}>SOL</span>
+          <span className="font-pixel text-base sm:text-lg" style={{ color: "#ffe45c", textShadow: "0 0 12px #ffe45c60" }}>CITY</span>
         </button>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <a href={SOCIAL_LINKS.x} target="_blank" rel="noopener noreferrer"
@@ -594,13 +644,26 @@ export default function Home() {
               🔍
             </button>
           </div>
-          <button
-            onClick={() => { setIsFlyMode(true); setShowHud(false); setSelectedBuilding(null); }}
-            className="btn-press ml-2 px-3 py-2 text-[9px] font-pixel font-bold text-black flex-shrink-0 rounded-sm"
-            style={{ background: "linear-gradient(135deg, #ff69c7, #ffe45c)" }}
-          >
-            ✈ FLY
-          </button>
+          <div className="flex gap-1 mt-1">
+            <button
+              onClick={() => setShowDatabase(true)}
+              className="btn-press flex-1 px-3 py-1.5 text-[8px] font-pixel font-bold flex-shrink-0 rounded-sm transition-colors"
+              style={{
+                background: "#1a1520",
+                color: "#b44dff",
+                border: "1px solid #b44dff40",
+              }}
+            >
+              📊 DATABASE
+            </button>
+            <button
+              onClick={() => { setIsFlyMode(true); setShowHud(false); setSelectedBuilding(null); }}
+              className="btn-press flex-1 px-3 py-1.5 text-[8px] font-pixel font-bold text-black flex-shrink-0 rounded-sm"
+              style={{ background: "linear-gradient(135deg, #ff69c7, #ffe45c)" }}
+            >
+              ✈ FLY
+            </button>
+          </div>
           {searchNotFound && (
             <p className="text-[9px] font-pixel text-[#ff2d95] text-center mt-1 animate-pulse">WALLET NOT FOUND IN CITY</p>
           )}
@@ -670,42 +733,55 @@ export default function Home() {
             </div>
           </div>
 
-          {/* CTA row: Buy | How it works? | Explore City | Fly | ADs */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-5">
-            <a
-              href={SOCIAL_LINKS.buy}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-press px-4 py-2 text-[10px] sm:text-[11px] font-pixel font-bold text-black"
-              style={{ background: "linear-gradient(135deg, #ffe45c, #ff8a3d)", boxShadow: "2px 2px 0 0 #8a5a1a" }}
-            >
-              BUY
-            </a>
+          {/* CTA Row 1: How it works | Explore City */}
+          <div className="flex items-center justify-center gap-2 mb-2">
             <button
               onClick={() => { setShowHowItWorks(true); setSelectedBuilding(null); setShowVerifyPanel(false); setShowAdsPanel(false); }}
-              className="btn-press px-4 py-2 text-[10px] sm:text-[11px] font-pixel font-bold border border-[#b44dff]/50 text-[#b44dff] hover:bg-[#b44dff]/10 transition-colors relative"
+              className="btn-press px-5 py-2.5 text-[10px] sm:text-[11px] font-pixel font-bold text-[#b44dff] hover:brightness-110 transition-all relative"
+              style={{ border: "2px solid #b44dff80", background: "rgba(10,10,15,0.6)", backdropFilter: "blur(4px)" }}
             >
               HOW IT WORKS?
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#b44dff] animate-pulse" />
             </button>
             <button
               onClick={() => { setIsFlyMode(false); setShowHud(false); setSelectedBuilding(null); setShowHowItWorks(false); setShowVerifyPanel(false); setShowAdsPanel(false); }}
-              className="btn-press px-4 sm:px-5 py-2 text-[10px] sm:text-[11px] font-pixel font-bold text-black"
-              style={{ background: "linear-gradient(135deg, #ff69c7, #ffe45c)", boxShadow: "2px 2px 0 0 #8a1a6a" }}
+              className="btn-press px-5 sm:px-6 py-2.5 text-[10px] sm:text-[11px] font-pixel font-bold text-black hover:brightness-110 transition-all"
+              style={{ border: "2px solid #ff69c7", background: "linear-gradient(135deg, #ff69c7, #ffe45c)", boxShadow: "0 0 16px #ff69c740, 2px 2px 0 0 #8a1a6a" }}
             >
               EXPLORE CITY
             </button>
-            <button
-              onClick={() => setIsFlyMode(true)}
-              className="btn-press px-4 py-2 text-[10px] sm:text-[11px] font-pixel font-bold border border-[#ff2d95]/40 text-[#ff2d95] hover:bg-[#ff2d95]/10 transition-colors"
+          </div>
+          {/* CTA Row 2: Buy | Database | Ads | Fly */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-5">
+            <a
+              href={SOCIAL_LINKS.buy}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-press px-4 py-2 text-[10px] sm:text-[11px] font-pixel font-bold text-black hover:brightness-110 transition-all"
+              style={{ border: "2px solid #ffe45c", background: "linear-gradient(135deg, #ffe45c, #ff8a3d)", boxShadow: "0 0 12px #ffe45c40, 2px 2px 0 0 #8a5a1a" }}
             >
-              ✈ FLY
+              BUY
+            </a>
+            <button
+              onClick={() => { setShowDatabase(true); setSelectedBuilding(null); setShowHowItWorks(false); setShowVerifyPanel(false); setShowAdsPanel(false); }}
+              className="btn-press px-4 py-2 text-[10px] sm:text-[11px] font-pixel font-bold text-[#14f195] hover:bg-[#14f195]/15 transition-all"
+              style={{ border: "2px solid #14f19560", background: "rgba(10,10,15,0.6)", backdropFilter: "blur(4px)" }}
+            >
+              DATABASE
             </button>
             <button
               onClick={() => { setShowAdsPanel(true); setSelectedBuilding(null); setShowHowItWorks(false); setShowVerifyPanel(false); }}
-              className="btn-press px-4 py-2 text-[10px] sm:text-[11px] font-pixel font-bold border border-[#ffe45c]/40 text-[#ffe45c] hover:bg-[#ffe45c]/10 transition-colors"
+              className="btn-press px-4 py-2 text-[10px] sm:text-[11px] font-pixel font-bold text-[#ffe45c] hover:bg-[#ffe45c]/15 transition-all"
+              style={{ border: "2px solid #ffe45c60", background: "rgba(10,10,15,0.6)", backdropFilter: "blur(4px)" }}
             >
-              📣 ADs
+              ADs
+            </button>
+            <button
+              onClick={() => setIsFlyMode(true)}
+              className="btn-press px-4 py-2 text-[10px] sm:text-[11px] font-pixel font-bold text-[#ff2d95] hover:bg-[#ff2d95]/15 transition-all"
+              style={{ border: "2px solid #ff2d9560", background: "rgba(10,10,15,0.6)", backdropFilter: "blur(4px)" }}
+            >
+              FLY
             </button>
           </div>
 
@@ -723,15 +799,37 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ═══ BOTTOM-LEFT CONTROLS ═══ */}
-      <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2">
-        <button
-          onClick={() => setIsFlyMode((v) => !v)}
-          className="btn-press border border-[#ff2d95]/40 bg-bg/60 backdrop-blur-sm px-3 py-1.5 text-[9px] sm:text-[10px] font-pixel text-[#ff2d95] hover:bg-[#ff2d95]/10 transition-colors"
-        >
-          {isFlyMode ? "EXIT FLY" : "✈ FLY"}
-        </button>
-      </div>
+      {/* ═══ FLY MODE — CENTER EXIT BUTTON ═══ */}
+      {isFlyMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <button
+            onClick={() => { setIsFlyMode(false); setShowHud(true); setSelectedBuilding(null); setFocusedBuildingLogin(null); }}
+            className="btn-press px-6 py-2.5 text-[10px] font-pixel font-bold text-black rounded-sm"
+            style={{
+              background: "linear-gradient(135deg, #ff69c7, #ffe45c)",
+              boxShadow: "0 0 20px #ff69c740, 2px 2px 0 0 #8a1a6a",
+            }}
+          >
+            ✕ EXIT FLY
+          </button>
+        </div>
+      )}
+
+      {/* ═══ EXPLORE MODE — CENTER EXIT BUTTON ═══ */}
+      {!hudVisible && !isFlyMode && !showVerifyPanel && !selectedBuilding && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <button
+            onClick={() => { setShowHud(true); setSelectedBuilding(null); setFocusedBuildingLogin(null); }}
+            className="btn-press px-6 py-2.5 text-[10px] font-pixel font-bold text-black rounded-sm"
+            style={{
+              background: "linear-gradient(135deg, #ff69c7, #ffe45c)",
+              boxShadow: "0 0 20px #ff69c740, 2px 2px 0 0 #8a1a6a",
+            }}
+          >
+            ✕ EXIT
+          </button>
+        </div>
+      )}
 
       {/* ═══ HOW IT WORKS — slide-in from right ═══ */}
       <div
@@ -965,8 +1063,8 @@ export default function Home() {
                 {[
                   { label: "Transactions", value: walletData.totalTransactions.toLocaleString(), color: "#ff2d95" },
                   { label: "Volume", value: `${walletData.volumeEstimate.toLocaleString(undefined, { maximumFractionDigits: 1 })} SOL`, color: "#b44dff" },
-                  { label: "PnL", value: `${walletData.pnlEstimate >= 0 ? "+" : ""}${walletData.pnlEstimate.toLocaleString()} SOL`, color: walletData.pnlEstimate >= 0 ? "#14f195" : "#ff2d95" },
-                  { label: "Win Rate", value: `${walletData.winRate}%`, color: "#9945ff" },
+                  { label: "PnL", value: `${walletData.pnlUsd >= 0 ? "+" : ""}$${Math.abs(walletData.pnlUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}${walletData.pnlIsReal ? "" : " EST"}`, color: walletData.pnlUsd >= 0 ? "#14f195" : "#ff2d95" },
+                  { label: "Win Rate", value: `${(walletData.winRate * 100).toFixed(1)}%`, color: "#9945ff" },
                   { label: "Tokens", value: walletData.tokenCount.toString(), color: "#00f0ff" },
                   { label: "Degen Score", value: `${walletData.degenScore}/100`, color: "#b44dff" },
                 ].map((m, i) => (
@@ -1067,8 +1165,8 @@ export default function Home() {
                 {[
                   { label: "TRANSACTIONS", value: selectedBuilding.totalTransactions.toLocaleString(), color: "#ff2d95" },
                   { label: "VOLUME (SOL)", value: selectedBuilding.volumeEstimate.toLocaleString(undefined, { maximumFractionDigits: 1 }), color: "#b44dff" },
-                  { label: "PNL", value: `${selectedBuilding.pnlEstimate >= 0 ? "+" : ""}${selectedBuilding.pnlEstimate.toLocaleString()}`, color: selectedBuilding.pnlEstimate >= 0 ? "#14f195" : "#ff2d95" },
-                  { label: "WIN RATE", value: `${selectedBuilding.winRate}%`, color: "#9945ff" },
+                  { label: "PNL", value: `${selectedBuilding.pnlUsd >= 0 ? "+" : ""}$${Math.abs(selectedBuilding.pnlUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}${selectedBuilding.pnlIsReal ? "" : " EST"}`, color: selectedBuilding.pnlUsd >= 0 ? "#14f195" : "#ff2d95" },
+                  { label: "WIN RATE", value: `${(selectedBuilding.winRate * 100).toFixed(1)}%`, color: "#9945ff" },
                   { label: "TOKENS", value: selectedBuilding.tokenCount.toString(), color: "#00f0ff" },
                   { label: "NFTS", value: selectedBuilding.nftCount.toString(), color: "#ff2d95" },
                   { label: "RUGS SURVIVED", value: selectedBuilding.rugsSurvived.toString(), color: "#00f0ff" },
@@ -1120,37 +1218,118 @@ export default function Home() {
 
           <h2 className="font-pixel text-lg mb-1">
             <NeonText color="#ffe45c">ADVERTISE</NeonText>{" "}
-            <NeonText color="#ff2d95">IN THE SKY</NeonText>
+            <NeonText color="#ff2d95">IN THE SOLANA SKYLINE</NeonText>
           </h2>
           <p className="text-[9px] font-pixel text-dim mb-5">
             Place your brand inside SolCity. Powered by x402 micropayments in USDC.
           </p>
 
-          <div className="space-y-3 mb-6">
+          <div className="space-y-3 mb-5">
             {[
-              { name: "Sky Plane", emoji: "✈️", desc: "Banner trails flying over the city skyline", price: "5 USDC / day", color: "#ff2d95" },
-              { name: "Blimp", emoji: "🎈", desc: "Floating blimp with your logo above the city center", price: "10 USDC / day", color: "#b44dff" },
-              { name: "Billboard", emoji: "📺", desc: "Neon billboard on the main highway through districts", price: "3 USDC / day", color: "#ffe45c" },
-              { name: "LED Building Wrap", emoji: "💡", desc: "Wrap an entire skyscraper with your animated ad", price: "15 USDC / day", color: "#14f195" },
-            ].map((ad) => (
-              <div
-                key={ad.name}
-                className="border border-border/30 bg-bg/40 p-4 hover:border-opacity-60 transition-colors"
-                style={{ borderColor: `${ad.color}30` }}
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl">{ad.emoji}</span>
-                  <div>
-                    <p className="font-pixel text-[11px] font-bold" style={{ color: ad.color }}>{ad.name}</p>
-                    <p className="font-pixel text-[8px] text-dim">{ad.desc}</p>
+              { id: "plane", name: "Sky Plane", emoji: "✈️", desc: "Banner trails flying over the city skyline", price: 15, color: "#ff2d95" },
+              { id: "blimp", name: "Blimp", emoji: "🎈", desc: "Floating blimp with your logo above the city center", price: 20, color: "#b44dff" },
+              { id: "billboard", name: "Billboard", emoji: "📺", desc: "Neon billboard on the main highway through districts", price: 25, color: "#ffe45c" },
+              { id: "ledwrap", name: "LED Building Wrap", emoji: "💡", desc: "Wrap an entire skyscraper with your animated ad", price: 8, color: "#14f195" },
+            ].map((ad) => {
+              const cartItem = adCart.find(c => c.id === ad.id);
+              const inCart = !!cartItem;
+              return (
+                <div
+                  key={ad.id}
+                  className="border bg-bg/40 p-4 transition-colors"
+                  style={{ borderColor: inCart ? ad.color : `${ad.color}30` }}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">{ad.emoji}</span>
+                    <div className="flex-1">
+                      <p className="font-pixel text-[11px] font-bold" style={{ color: ad.color }}>{ad.name}</p>
+                      <p className="font-pixel text-[8px] text-dim">{ad.desc}</p>
+                    </div>
                   </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="font-pixel text-[10px] text-cream">{ad.price} USDC / day</span>
+                    <button
+                      onClick={() => {
+                        setAdCart(prev =>
+                          inCart
+                            ? prev.filter(c => c.id !== ad.id)
+                            : [...prev, { id: ad.id, name: ad.name, price: ad.price, days: 1 }]
+                        );
+                      }}
+                      className="btn-press font-pixel text-[8px] px-3 py-1 rounded-sm transition-colors"
+                      style={{
+                        background: inCart ? ad.color : "transparent",
+                        color: inCart ? "#0a0a0f" : ad.color,
+                        border: `1px solid ${ad.color}60`,
+                      }}
+                    >
+                      {inCart ? "✓ ADDED" : "+ ADD"}
+                    </button>
+                  </div>
+                  {inCart && (
+                    <div className="flex items-center gap-2 mt-3 pt-2 border-t" style={{ borderColor: `${ad.color}20` }}>
+                      <span className="font-pixel text-[8px] text-dim">DAYS:</span>
+                      <button
+                        onClick={() => setAdCart(prev => prev.map(c => c.id === ad.id ? { ...c, days: Math.max(1, c.days - 1) } : c))}
+                        className="btn-press w-5 h-5 flex items-center justify-center font-pixel text-[10px] rounded-sm"
+                        style={{ border: `1px solid ${ad.color}40`, color: ad.color }}
+                      >
+                        -
+                      </button>
+                      <span className="font-pixel text-[10px] text-cream font-bold w-6 text-center">{cartItem.days}</span>
+                      <button
+                        onClick={() => setAdCart(prev => prev.map(c => c.id === ad.id ? { ...c, days: c.days + 1 } : c))}
+                        className="btn-press w-5 h-5 flex items-center justify-center font-pixel text-[10px] rounded-sm"
+                        style={{ border: `1px solid ${ad.color}40`, color: ad.color }}
+                      >
+                        +
+                      </button>
+                      <span className="font-pixel text-[8px] ml-auto" style={{ color: ad.color }}>
+                        {cartItem.days * ad.price} USDC
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="font-pixel text-[10px] text-cream">{ad.price}</span>
-                  <span className="font-pixel text-[8px] text-dim border border-border/30 px-2 py-0.5">COMING SOON</span>
+              );
+            })}
+          </div>
+
+          {/* Shopping Cart */}
+          {adCart.length > 0 && (
+            <div className="border border-[#ffe45c]/30 bg-[#ffe45c]/5 p-3 mb-4 rounded-sm">
+              <p className="font-pixel text-[9px] text-[#ffe45c] font-bold mb-2">🛒 YOUR CART</p>
+              {adCart.map(item => (
+                <div key={item.id} className="flex justify-between items-center mb-1">
+                  <span className="font-pixel text-[8px] text-cream">{item.name} <span className="text-dim">x{item.days}d</span></span>
+                  <span className="font-pixel text-[8px] text-dim">{item.price * item.days} USDC</span>
                 </div>
+              ))}
+              <div className="border-t border-[#ffe45c]/20 mt-2 pt-2 flex justify-between items-center">
+                <span className="font-pixel text-[9px] text-cream font-bold">TOTAL</span>
+                <span className="font-pixel text-[10px] text-[#ffe45c] font-bold">
+                  {adCart.reduce((s, c) => s + c.price * c.days, 0)} USDC
+                </span>
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Connect Wallet Button */}
+          <div className="relative group mb-5">
+            <button
+              onClick={() => {}}
+              className="btn-press w-full py-2.5 text-[10px] font-pixel font-bold rounded-sm transition-colors"
+              style={{
+                background: "linear-gradient(135deg, #b44dff, #ff69c7)",
+                color: "#0a0a0f",
+                opacity: 0.7,
+                cursor: "not-allowed",
+              }}
+            >
+              🔗 CONNECT WALLET TO PAY
+            </button>
+            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1a1520] border border-[#b44dff]/40 px-3 py-1 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              <span className="font-pixel text-[7px] text-[#b44dff]">Releasing soon</span>
+            </div>
           </div>
 
           <div className="border border-[#ff8a3d]/20 bg-bg/40 p-3 mb-4">
@@ -1187,6 +1366,20 @@ export default function Home() {
             <button onClick={() => { setFetchError(""); setVerifyStep(0); }} className="text-[8px] font-pixel text-dim hover:text-cream">✕</button>
           </div>
         </div>
+      )}
+
+      {/* ═══ DATABASE PANEL ═══ */}
+      {showDatabase && (
+        <DatabasePanel
+          wallets={seedCity}
+          nicknames={nicknames}
+          onNavigate={(w) => {
+            setFocusedBuildingLogin(w.address);
+            setSelectedBuilding(w);
+            setShowDatabase(false);
+          }}
+          onClose={() => setShowDatabase(false)}
+        />
       )}
 
       {/* ═══ BOTTOM STATS BAR ═══ */}

@@ -1,10 +1,11 @@
 import "server-only";
+import { fetchBirdeyePnl } from "./birdeye";
 
 /**
- * Solana wallet data fetching via Helius API.
+ * Solana wallet data fetching via Helius API + Birdeye PnL.
  * Computes wallet metrics used to generate SolCity buildings.
  *
- * Requires env: HELIUS_API_KEY
+ * Requires env: HELIUS_API_KEY, BIRDEYE_API_KEY (optional)
  */
 
 const HELIUS_BASE = "https://mainnet.helius-rpc.com";
@@ -35,12 +36,15 @@ export interface WalletMetrics {
   volumeEstimate: number;
   swapCount: number;
   uniqueTokensTraded: number;
-  // Derived / estimated
-  pnlEstimate: number;
-  winRate: number;
+  // PnL & trading metrics (real from Birdeye when available, estimated otherwise)
+  pnlUsd: number;        // total PnL in USD (realized + unrealized)
+  realizedPnlUsd: number; // realized profit in USD
+  winRate: number;        // 0-1 ratio
+  totalTrades: number;    // buy + sell count from Birdeye
   avgHoldTime: string;
   rugsSurvived: number;
   degenScore: number;
+  pnlIsReal: boolean;     // true = Birdeye data, false = estimated
   // City params
   citySize: number;       // from volume
   skyscraperHeight: number; // from PnL
@@ -226,10 +230,11 @@ function deriveCityParams(metrics: {
 /* ─── Estimate fun metrics ─────────────────────────────────── */
 
 function estimateFunMetrics(txs: HeliusTransaction[], totalTxs: number, uniqueTokens: number) {
-  // PnL estimate: random-ish but seeded on tx count for consistency
+  // PnL estimate: seeded pseudo-random in a realistic SOL range
   // In production, you'd use Birdeye/Nansen for real PnL
   const seed = totalTxs * 7 + uniqueTokens * 13;
-  const pnlEstimate = Math.floor((seed % 50000) - 10000); // -10k to +40k
+  const raw = (seed % 1000) - 200; // -200 to +800 SOL range
+  const pnlEstimate = Math.floor(raw * (1 + (uniqueTokens % 5) * 0.3));
 
   // Win rate: roughly based on swap diversity
   const winRate = Math.min(85, Math.max(25, 40 + (uniqueTokens % 45)));
@@ -240,12 +245,12 @@ function estimateFunMetrics(txs: HeliusTransaction[], totalTxs: number, uniqueTo
   const mins = avgMinutes % 60;
   const avgHoldTime = `${hours}h ${mins}m`;
 
-  // Rugs survived: roughly 1 per 50 unique tokens (lol)
+  // Rugs survived: roughly 1 per 3 unique tokens
   const rugsSurvived = Math.max(0, Math.floor(uniqueTokens / 3));
 
-  // Degen score: 0-100
+  // Degen score: 0-100 based on activity volume
   const degenScore = Math.min(100, Math.max(10,
-    Math.floor((totalTxs / 50) + (uniqueTokens * 2) + (pnlEstimate > 0 ? 20 : 0))
+    Math.floor((totalTxs / 50) + (uniqueTokens * 2) + (winRate > 50 ? 15 : 0))
   ));
 
   return { pnlEstimate, winRate, avgHoldTime, rugsSurvived, degenScore };
@@ -256,21 +261,60 @@ function estimateFunMetrics(txs: HeliusTransaction[], totalTxs: number, uniqueTo
    ═══════════════════════════════════════════════════════════════ */
 
 export async function fetchWalletMetrics(address: string, name?: string): Promise<WalletMetrics> {
-  // Run independent calls in parallel
-  const [balance, totalTransactions, tokens, txHistory] = await Promise.all([
+  // Run independent calls in parallel (Helius + Birdeye)
+  const [balance, totalTransactions, tokens, txHistory, birdeyePnl] = await Promise.all([
     getBalance(address),
     getSignatureCount(address),
     getTokenAccounts(address),
     getTransactionHistory(address),
+    fetchBirdeyePnl(address),
   ]);
 
   const txMetrics = computeMetricsFromTxs(txHistory);
-  const funMetrics = estimateFunMetrics(txHistory, totalTransactions, txMetrics.uniqueTokensTraded);
+
+  // Use real Birdeye data if available, fall back to estimation
+  let pnlUsd: number;
+  let realizedPnlUsd: number;
+  let winRate: number;
+  let totalTrades: number;
+  let degenScore: number;
+  let pnlIsReal: boolean;
+  let uniqueTokens = txMetrics.uniqueTokensTraded;
+
+  if (birdeyePnl) {
+    pnlUsd = birdeyePnl.totalPnlUsd;
+    realizedPnlUsd = birdeyePnl.realizedProfitUsd;
+    winRate = birdeyePnl.winRate;
+    totalTrades = birdeyePnl.totalTrade;
+    uniqueTokens = Math.max(uniqueTokens, birdeyePnl.uniqueTokens);
+    pnlIsReal = true;
+    // Degen score from real metrics: trade volume + win consistency + token diversity
+    degenScore = Math.min(100, Math.max(10, Math.floor(
+      Math.min(40, totalTrades / 500) +
+      Math.min(30, uniqueTokens / 50) +
+      (winRate > 0.5 ? 20 : winRate > 0.4 ? 10 : 5) +
+      (Math.abs(pnlUsd) > 100000 ? 10 : Math.abs(pnlUsd) > 10000 ? 5 : 0)
+    )));
+  } else {
+    const est = estimateFunMetrics(txHistory, totalTransactions, uniqueTokens);
+    pnlUsd = est.pnlEstimate; // fallback: fake estimate
+    realizedPnlUsd = est.pnlEstimate;
+    winRate = est.winRate / 100; // normalize old 25-85 range to 0-1
+    totalTrades = totalTransactions;
+    degenScore = est.degenScore;
+    pnlIsReal = false;
+  }
+
+  // Avg hold time & rugs survived (still estimated — no API for these)
+  const avgMinutes = totalTransactions > 100 ? 15 + (totalTransactions % 300) : 60 + (totalTransactions % 1440);
+  const avgHoldTime = `${Math.floor(avgMinutes / 60)}h ${avgMinutes % 60}m`;
+  const rugsSurvived = Math.max(0, Math.floor(uniqueTokens / 3));
+
   const cityParams = deriveCityParams({
     totalTransactions,
     volumeEstimate: txMetrics.volumeEstimate,
     swapCount: txMetrics.swapCount,
-    uniqueTokensTraded: txMetrics.uniqueTokensTraded,
+    uniqueTokensTraded: uniqueTokens,
     tokenCount: tokens.fungibleCount,
   });
 
@@ -283,8 +327,15 @@ export async function fetchWalletMetrics(address: string, name?: string): Promis
     nftCount: tokens.nftCount,
     volumeEstimate: txMetrics.volumeEstimate,
     swapCount: txMetrics.swapCount,
-    uniqueTokensTraded: txMetrics.uniqueTokensTraded,
-    ...funMetrics,
+    uniqueTokensTraded: uniqueTokens,
+    pnlUsd,
+    realizedPnlUsd,
+    winRate,
+    totalTrades,
+    avgHoldTime,
+    rugsSurvived,
+    degenScore,
+    pnlIsReal,
     ...cityParams,
   };
 }

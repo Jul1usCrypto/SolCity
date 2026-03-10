@@ -69,6 +69,8 @@ function generateMockWallet(address: string, name?: string): WalletMetrics {
   const tokens = 5 + Math.abs((seed * 3) % 80);
   const swaps = Math.floor(totalTx * 0.4);
 
+  const mockPnl = ((seed * 13) % 20000) - 5000; // -$5k to +$15k USD range
+
   return {
     address,
     name,
@@ -79,11 +81,14 @@ function generateMockWallet(address: string, name?: string): WalletMetrics {
     volumeEstimate: vol,
     swapCount: swaps,
     uniqueTokensTraded: tokens,
-    pnlEstimate: ((seed * 13) % 40000) - 5000,
-    winRate: 30 + Math.abs((seed * 17) % 55),
+    pnlUsd: mockPnl,
+    realizedPnlUsd: mockPnl * 0.7,
+    winRate: (30 + Math.abs((seed * 17) % 55)) / 100, // 0-1 range
+    totalTrades: totalTx,
     avgHoldTime: `${1 + Math.abs((seed * 2) % 48)}h ${Math.abs((seed * 3) % 60)}m`,
     rugsSurvived: Math.floor(tokens / 3),
     degenScore: 20 + Math.abs((seed * 19) % 80),
+    pnlIsReal: false,
     citySize: Math.min(5, Math.max(1, Math.ceil(Math.log10(Math.max(vol, 1))))),
     skyscraperHeight: Math.min(100, Math.max(5, Math.floor(vol / 10))),
     buildingCount: Math.min(200, Math.max(5, Math.floor(totalTx / 25))),
