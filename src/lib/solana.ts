@@ -288,6 +288,7 @@ export async function fetchWalletMetrics(address: string, name?: string): Promis
     totalTrades = birdeyePnl.totalTrade;
     uniqueTokens = Math.max(uniqueTokens, birdeyePnl.uniqueTokens);
     pnlIsReal = true;
+    console.log(`[pnl] REAL Birdeye data for ${name ?? address.slice(0,8)}: $${pnlUsd.toFixed(0)} PnL, ${totalTrades} trades, ${(winRate*100).toFixed(1)}% WR`);
     // Degen score from real metrics: trade volume + win consistency + token diversity
     degenScore = Math.min(100, Math.max(10, Math.floor(
       Math.min(40, totalTrades / 500) +
@@ -297,12 +298,15 @@ export async function fetchWalletMetrics(address: string, name?: string): Promis
     )));
   } else {
     const est = estimateFunMetrics(txHistory, totalTransactions, uniqueTokens);
-    pnlUsd = est.pnlEstimate; // fallback: fake estimate
-    realizedPnlUsd = est.pnlEstimate;
+    // Convert SOL estimate to rough USD (est is in SOL range), scale up for realism
+    const solPrice = 130; // approximate SOL/USD
+    pnlUsd = est.pnlEstimate * solPrice;
+    realizedPnlUsd = pnlUsd * 0.7;
     winRate = est.winRate / 100; // normalize old 25-85 range to 0-1
     totalTrades = totalTransactions;
     degenScore = est.degenScore;
     pnlIsReal = false;
+    console.log(`[pnl] EST fallback for ${name ?? address.slice(0,8)}: ~$${pnlUsd.toFixed(0)} PnL (no Birdeye data)`);
   }
 
   // Avg hold time & rugs survived (still estimated — no API for these)

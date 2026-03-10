@@ -29,12 +29,21 @@ export async function GET() {
         chunk.map((kol) => fetchWalletMetrics(kol.address, kol.name))
       );
 
+      let fulfilled = 0;
       results.forEach((result, idx) => {
         if (result.status === "fulfilled") {
           liveByAddress.set(chunk[idx].address, result.value);
+          fulfilled++;
         }
       });
+      console.log(`[seed] Chunk ${Math.floor(i/CHUNK_SIZE)+1}: ${fulfilled}/${chunk.length} wallets fetched`);
+
+      // Small delay between chunks to avoid Birdeye rate limits
+      if (i + CHUNK_SIZE < KOL_WALLETS.length) {
+        await new Promise(r => setTimeout(r, 1200));
+      }
     }
+    console.log(`[seed] Total live: ${liveByAddress.size}/${KOL_WALLETS.length}`);
 
     // Keep ordering stable and fill failed live fetches with deterministic mocks.
     const metrics: WalletMetrics[] = KOL_WALLETS.map((kol) => {
@@ -69,7 +78,9 @@ function generateMockWallet(address: string, name?: string): WalletMetrics {
   const tokens = 5 + Math.abs((seed * 3) % 80);
   const swaps = Math.floor(totalTx * 0.4);
 
-  const mockPnl = ((seed * 13) % 20000) - 5000; // -$5k to +$15k USD range
+  // Wider realistic PnL range: -$50K to +$200K USD
+  const rawPnl = ((seed * 13) % 250000) - 50000;
+  const mockPnl = rawPnl + (Math.abs((seed * 31) % 80000) * (seed % 2 === 0 ? 1 : -0.3));
 
   return {
     address,

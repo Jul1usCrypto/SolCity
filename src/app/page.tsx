@@ -1519,6 +1519,17 @@ export default function Home() {
         />
       )}
 
+      {/* ═══ INTRO REPLAY BUTTON — bottom-left ═══ */}
+      {!introActive && introSlide > 3 && !isFlyMode && cityPreview && (
+        <button
+          onClick={() => { setIntroActive(false); setIntroSlide(-1); setIntroFading(false); }}
+          className="fixed bottom-3 left-3 z-50 btn-press font-pixel text-[8px] text-dim/60 hover:text-cream/80 transition-colors tracking-wider flex items-center gap-1 px-2 py-1.5 bg-bg/40 backdrop-blur-sm border border-border/20 rounded-sm"
+          title="Replay intro"
+        >
+          ▶ INTRO
+        </button>
+      )}
+
       {/* ═══ BOTTOM STATS BAR ═══ */}
       <div className={`fixed bottom-0 left-0 right-0 z-40 pointer-events-none transition-all duration-300 ${isFlyMode ? "opacity-0 translate-y-full" : "opacity-100"}`}>
         <div className="flex items-center justify-center gap-5 sm:gap-8 px-4 py-2.5 bg-bg/40 backdrop-blur-sm border-t border-border/30">
