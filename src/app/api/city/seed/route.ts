@@ -2,27 +2,40 @@ import { NextResponse } from "next/server";
 import { KOL_WALLETS } from "@/lib/kol-wallets";
 import { fetchWalletMetrics, type WalletMetrics } from "@/lib/solana";
 
-// In-memory cache for seed data (refreshes every 10 min)
-let cachedSeed: WalletMetrics[] | null = null;
-let cacheTime = 0;
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+// ─── Static snapshot: hardcoded seed data for instant load ───
+import SEED_SNAPSHOT from "@/data/seed-snapshot.json";
+
+// In-memory live cache (populated by background refresh)
+let liveCache: WalletMetrics[] | null = null;
+let liveCacheTime = 0;
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+let refreshInProgress = false;
 
 export async function GET() {
-  // If no Helius key, return mock data so the city still works
-  if (!process.env.HELIUS_API_KEY) {
-    return NextResponse.json(generateMockSeed());
+  // 1) If we have a fresh live cache, serve it
+  if (liveCache && Date.now() - liveCacheTime < CACHE_TTL) {
+    return NextResponse.json(liveCache, { headers: cacheHeaders() });
   }
 
-  // Return cached if fresh
-  if (cachedSeed && Date.now() - cacheTime < CACHE_TTL) {
-    return NextResponse.json(cachedSeed);
+  // 2) Serve the static snapshot IMMEDIATELY, then kick off background refresh
+  if (!refreshInProgress && process.env.HELIUS_API_KEY) {
+    refreshInProgress = true;
+    refreshSeedData().finally(() => { refreshInProgress = false; });
   }
 
+  // Return live cache if available (even if stale), otherwise static snapshot
+  return NextResponse.json(liveCache ?? SEED_SNAPSHOT, { headers: cacheHeaders() });
+}
+
+function cacheHeaders() {
+  return { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" };
+}
+
+// ─── Background refresh: fetches live data without blocking the response ───
+async function refreshSeedData() {
   try {
-    // Fetch wallets in chunks. Birdeye calls are rate-limited internally
-    // (1 req/1.1s via birdeye.ts queue), so we can safely run Helius in parallel.
     const CHUNK_SIZE = 8;
-    const CHUNK_DELAY_MS = 500; // small gap for Helius courtesy
+    const CHUNK_DELAY_MS = 500;
     const liveByAddress = new Map<string, WalletMetrics>();
 
     for (let i = 0; i < KOL_WALLETS.length; i += CHUNK_SIZE) {
@@ -38,83 +51,26 @@ export async function GET() {
           fulfilled++;
         }
       });
-      console.log(`[seed] Chunk ${Math.floor(i/CHUNK_SIZE)+1}: ${fulfilled}/${chunk.length} wallets fetched`);
+      console.log(`[seed] Chunk ${Math.floor(i / CHUNK_SIZE) + 1}: ${fulfilled}/${chunk.length} wallets fetched`);
 
-      // Delay between chunks to respect Birdeye 60 RPM rate limit
       if (i + CHUNK_SIZE < KOL_WALLETS.length) {
         await new Promise(r => setTimeout(r, CHUNK_DELAY_MS));
       }
     }
-    console.log(`[seed] Total live: ${liveByAddress.size}/${KOL_WALLETS.length}`);
 
-    // Keep ordering stable and fill failed live fetches with deterministic mocks.
-    const metrics: WalletMetrics[] = KOL_WALLETS.map((kol) => {
-      return liveByAddress.get(kol.address) ?? generateMockWallet(kol.address, kol.name);
+    console.log(`[seed] Background refresh done: ${liveByAddress.size}/${KOL_WALLETS.length} live`);
+
+    // Merge: use live data where available, fall back to snapshot entry
+    const snapshotMap = new Map((SEED_SNAPSHOT as WalletMetrics[]).map(w => [w.address, w]));
+    const merged: WalletMetrics[] = KOL_WALLETS.map((kol) => {
+      return liveByAddress.get(kol.address) ?? snapshotMap.get(kol.address) ?? (SEED_SNAPSHOT as WalletMetrics[])[0];
     });
 
-    if (metrics.length > 0) {
-      cachedSeed = metrics;
-      cacheTime = Date.now();
+    if (merged.length > 0) {
+      liveCache = merged;
+      liveCacheTime = Date.now();
     }
-
-    return NextResponse.json(metrics.length > 0 ? metrics : generateMockSeed(), {
-      headers: {
-        "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200",
-      },
-    });
   } catch (err) {
-    console.error("[city/seed] Error:", err);
-    return NextResponse.json(generateMockSeed());
+    console.error("[seed] Background refresh error:", err);
   }
-}
-
-/** Mock seed data so the city renders even without Helius key */
-function generateMockSeed() {
-  return KOL_WALLETS.map((kol) => generateMockWallet(kol.address, kol.name));
-}
-
-function generateMockWallet(address: string, name?: string): WalletMetrics {
-  const seed = hashCode(address);
-  const totalTx = 500 + Math.abs(seed % 15000);
-  const vol = 10 + Math.abs((seed * 7) % 50000);
-  const tokens = 5 + Math.abs((seed * 3) % 80);
-  const swaps = Math.floor(totalTx * 0.4);
-
-  // Wider realistic PnL range: -$50K to +$200K USD
-  const rawPnl = ((seed * 13) % 250000) - 50000;
-  const mockPnl = rawPnl + (Math.abs((seed * 31) % 80000) * (seed % 2 === 0 ? 1 : -0.3));
-
-  return {
-    address,
-    name,
-    solBalance: 0.5 + Math.abs((seed * 11) % 500),
-    totalTransactions: totalTx,
-    tokenCount: tokens,
-    nftCount: Math.abs((seed * 5) % 20),
-    volumeEstimate: vol,
-    swapCount: swaps,
-    uniqueTokensTraded: tokens,
-    pnlUsd: mockPnl,
-    realizedPnlUsd: mockPnl * 0.7,
-    winRate: (30 + Math.abs((seed * 17) % 55)) / 100, // 0-1 range
-    totalTrades: totalTx,
-    avgHoldTime: `${1 + Math.abs((seed * 2) % 48)}h ${Math.abs((seed * 3) % 60)}m`,
-    rugsSurvived: Math.floor(tokens / 3),
-    degenScore: 20 + Math.abs((seed * 19) % 80),
-    pnlIsReal: false,
-    citySize: Math.min(5, Math.max(1, Math.ceil(Math.log10(Math.max(vol, 1))))),
-    skyscraperHeight: Math.min(100, Math.max(5, Math.floor(vol / 10))),
-    buildingCount: Math.min(200, Math.max(5, Math.floor(totalTx / 25))),
-    districtCount: Math.min(8, Math.max(1, Math.ceil(tokens / 5))),
-    hasNeonDistrict: tokens > 10,
-    parkCount: Math.max(0, Math.floor((1 - swaps / totalTx) * 5)),
-  };
-}
-
-function hashCode(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  }
-  return h;
 }
