@@ -65,7 +65,7 @@ function SupportContent() {
           Keep the <span style={{ color: ACCENT }}>Signal</span> Alive
         </h1>
         <p className="mt-2 text-xs text-muted normal-case sm:text-sm">
-          Git City runs on servers, databases, and API calls. Every new building
+          SolCity runs on servers, databases, and API calls. Every new building
           that goes up, the cost goes up with it. Your support keeps this city
           running.
         </p>
@@ -139,12 +139,12 @@ function SupportContent() {
               <span style={{ color: ACCENT }}>02.</span> GitHub Sponsors
             </p>
             <a
-              href="https://github.com/sponsors/srizzon"
+              href="https://github.com/sponsors/Jul1usCrypto"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-press mt-4 inline-block border-[2px] border-border px-5 py-2 text-xs text-muted transition-colors hover:border-border-light hover:text-cream"
             >
-              github.com/sponsors/srizzon
+              github.com/sponsors/Jul1usCrypto
             </a>
           </div>
 

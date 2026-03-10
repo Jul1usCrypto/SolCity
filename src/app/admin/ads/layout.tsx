@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase-server";
 
-const OWNER_LOGIN = "srizzon";
+const OWNER_LOGIN = "jul1uscrypto";
 
 export default async function AdminAdsLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerSupabase();

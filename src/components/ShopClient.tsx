@@ -1269,7 +1269,7 @@ export default function ShopClient({
                       } else if (isGitHubStar && !isOwned) {
                         // Step 1: open repo, Step 2: verify
                         if (starVerifyStep === "idle") {
-                          window.open("https://github.com/srizzon/git-city", "_blank");
+                          window.open("https://github.com/Jul1usCrypto/SolCity", "_blank");
                           setStarVerifyStep("opened");
                         } else if (starVerifyStep === "opened") {
                           verifyGitHubStar();

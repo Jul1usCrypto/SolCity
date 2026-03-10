@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       const priceBrl = getPriceCents(plan_id, "brl");
       const { brCode, brCodeBase64, pixId } = await createPixQrCodeRaw({
         amountCents: priceBrl,
-        description: `Git City Ad: ${plan.label}`,
+        description: `SolCity Ad: ${plan.label}`,
         externalId: `sky_ad:${adId}`,
       });
 
@@ -153,8 +153,8 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency,
             product_data: {
-              name: `Git City Ad: ${plan.label}`,
-              description: `${plan.label} ad for ${plan.duration_days} days on Git City`,
+              name: `SolCity Ad: ${plan.label}`,
+              description: `${plan.label} ad for ${plan.duration_days} days on SolCity`,
             },
             unit_amount: getPriceCents(plan_id, currency),
           },

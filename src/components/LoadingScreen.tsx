@@ -131,7 +131,7 @@ export default function LoadingScreen({
         className="font-pixel text-3xl tracking-[0.2em] sm:text-4xl"
         style={{ color: accentColor }}
       >
-        GIT CITY
+        SolCity
       </h1>
 
       {/* Stage message */}

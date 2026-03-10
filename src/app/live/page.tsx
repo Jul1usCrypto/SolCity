@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { LiveSession } from "@/lib/useCodingPresence";
 
-const CREATOR_LOGIN = "srizzon";
+const CREATOR_LOGIN = "jul1uscrypto";
 
 interface PresenceDev {
   githubLogin: string;

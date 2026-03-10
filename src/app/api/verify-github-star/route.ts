@@ -3,8 +3,8 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { rateLimit } from "@/lib/rate-limit";
 
-const REPO_OWNER = "srizzon";
-const REPO_NAME = "git-city";
+const REPO_OWNER = "Jul1usCrypto";
+const REPO_NAME = "SolCity";
 
 function ghHeaders(): HeadersInit {
   const h: HeadersInit = {

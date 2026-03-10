@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
-const OWNER_LOGIN = "srizzon";
+const OWNER_LOGIN = "jul1uscrypto";
 
 // Historical baselines from Himetrica (tracking was lost in Supabase due to www origin bug).
 // These get added on top of live Supabase counts. Remove once Supabase data catches up.

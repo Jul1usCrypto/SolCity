@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-export const alt = "Developer Comparison - Git City";
+export const alt = "Developer Comparison - SolCity";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

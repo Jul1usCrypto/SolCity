@@ -275,8 +275,8 @@ function SlideSolution() {
     <div className="flex w-full max-w-4xl flex-col gap-8">
       <SlideHeader n="03" title="The Solution" />
       <p className="max-w-2xl text-base leading-relaxed text-muted normal-case sm:text-lg">
-        Git City transforms every GitHub developer into a unique 3D pixel art
-        building. Contributions become height. Repos become width. Activity
+        SolCity transforms every Solana wallet into a unique 3D pixel art
+        building. PnL becomes height. Volume becomes width. Activity
         lights up windows. Together, they form a living city.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -447,7 +447,7 @@ function SlideCompetition() {
             <tr className="border-b-[2px] border-border text-muted">
               <th className="pb-3 pr-6 text-sm sm:text-base">Feature</th>
               <th className="pb-3 pr-6 text-sm sm:text-base" style={{ color: ACCENT }}>
-                Git City
+                SolCity
               </th>
               <th className="pb-3 pr-6 text-sm sm:text-base">GitHub Skyline</th>
               <th className="pb-3 text-sm sm:text-base">CodersRank</th>
@@ -463,7 +463,7 @@ function SlideCompetition() {
         </table>
       </div>
       <p className="text-sm text-dim normal-case sm:text-base">
-        GitHub Skyline was discontinued. No active product does what Git City
+        GitHub Skyline was discontinued. No active product does what SolCity
         does.
       </p>
     </div>
@@ -544,7 +544,7 @@ function SlideFounder() {
             </div>
           </div>
           <p className="text-sm leading-relaxed text-muted normal-case sm:text-base">
-            Built Git City in a single day and has been iterating daily since.
+            Built SolCity and has been iterating daily since.
             Handles everything: 3D engine, backend, payments, marketing,
             community. Building in public on X/Twitter.
           </p>
@@ -577,7 +577,7 @@ function SlideVision() {
           <span style={{ color: ACCENT }}>city</span>.
         </p>
         <p className="mt-4 text-sm text-muted normal-case sm:text-base">
-          thegitcity.com
+          solcity.city
         </p>
       </div>
     </div>
@@ -592,7 +592,7 @@ function SlideRoadmap() {
         <RoadmapItem quarter="Q1 2026" status="done" title="Core City" desc="3D city, leaderboards, achievements, streaks, shop, ads, districts, battles" />
         <RoadmapItem quarter="Q2 2026" status="next" title="Street Mode" desc="Third-person walking. Visit buildings, discover secrets, vehicles." />
         <RoadmapItem quarter="Q3 2026" status="planned" title="Pixels Economy" desc="Virtual currency, premium marketplace, season passes." />
-        <RoadmapItem quarter="Q4 2026" status="planned" title="Git City Wrapped" desc="Year-in-review animations. Viral shareable cards." />
+        <RoadmapItem quarter="Q4 2026" status="planned" title="SolCity Wrapped" desc="Year-in-review animations. Viral shareable cards." />
         <RoadmapItem quarter="2027" status="planned" title="100K+ Devs" desc="Enterprise, API, analytics dashboard, global events." />
       </div>
     </div>
@@ -604,16 +604,16 @@ function SlideContact() {
     <div className="flex w-full max-w-4xl flex-col items-center justify-center gap-10 text-center">
       <SlideHeader n="13" title="Let's Talk" />
       <p className="max-w-xl text-base leading-relaxed text-muted normal-case sm:text-lg">
-        Interested in Git City? Have questions, ideas, or want to collaborate?
+        Interested in SolCity? Have questions, ideas, or want to collaborate?
       </p>
       <div className="flex flex-col gap-5">
         <a
-          href="https://x.com/srizzon"
+          href="https://x.com/SolC1ty"
           target="_blank"
           rel="noopener noreferrer"
           className="border-[3px] border-border bg-bg-raised px-8 py-4 text-base text-cream transition-colors hover:border-border-light sm:text-lg"
         >
-          @srizzon on X
+          @SolC1ty on X
         </a>
         <a
           href="mailto:samuelrizzondev@gmail.com"
@@ -623,7 +623,7 @@ function SlideContact() {
         </a>
       </div>
       <p className="mt-4 text-sm text-muted normal-case sm:text-base">
-        thegitcity.com
+        solcity.city
       </p>
     </div>
   );

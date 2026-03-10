@@ -2,7 +2,7 @@ import { sendNotificationAsync } from "../notifications";
 import { buildButton } from "../email-template";
 import { getSupabaseAdmin } from "../supabase";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://thegitcity.com";
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://solcity.city";
 
 /**
  * Send community milestone notification to all opted-in users.
@@ -61,17 +61,17 @@ function sendNotificationForMilestone(
     category: "transactional",
     developerId: devId,
     dedupKey: `community_milestone:${milestone}:${devId}`,
-    title: `Git City hit ${formatted} developers!`,
+    title: `SolCity hit ${formatted} developers!`,
     body: `The community just reached ${formatted} developers. You're one of them!`,
     html: `
       <div style="text-align: center;">
         <p style="color: #c8e64a; font-size: 24px; font-weight: bold; margin-bottom: 4px;">${formatted}</p>
-        <p style="color: #f0f0f0; font-size: 16px; margin-top: 0;">developers in Git City</p>
+        <p style="color: #f0f0f0; font-size: 16px; margin-top: 0;">developers in SolCity</p>
       </div>
       <p style="color: #f0f0f0; text-align: center;">
         The community just hit a new milestone, and you're part of it, @${login}!
       </p>
-      ${buildButton("Visit Git City", BASE_URL)}
+      ${buildButton("Visit SolCity", BASE_URL)}
     `,
     actionUrl: BASE_URL,
     priority: "low",
