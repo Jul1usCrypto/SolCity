@@ -595,51 +595,64 @@ export default function Home() {
         <style>{`@keyframes loadbar { 0% { width: 0%; } 50% { width: 80%; } 100% { width: 100%; } }`}</style>
       </div>
 
-      {/* ═══ INTRO TEXT OVERLAY ═══ */}
+      {/* ═══ INTRO TEXT OVERLAY — bottom bar + skip ═══ */}
       {introActive && introSlide >= 0 && (
-        <div
-          className="fixed inset-0 z-[90] flex items-center justify-center pointer-events-none transition-opacity duration-700"
-          style={{ opacity: introFading ? 0 : 1 }}
-        >
-          <div className="text-center px-6">
-            {introSlide === 0 && (
-              <p className="font-pixel text-base sm:text-xl md:text-2xl text-cream/90 tracking-wider animate-fade-in-up"
-                style={{ textShadow: "0 0 20px #ff69c760, 0 0 40px #ff69c730" }}>
-                On-Chain metrics completely reimagined
-              </p>
-            )}
-            {introSlide === 1 && (
-              <p className="font-pixel text-base sm:text-xl md:text-2xl text-cream/90 tracking-wider animate-fade-in-up"
-                style={{ textShadow: "0 0 20px #b44dff60, 0 0 40px #b44dff30" }}>
-                Every wallet leaves a mark
-              </p>
-            )}
-            {introSlide === 2 && (
-              <p className="font-pixel text-base sm:text-xl md:text-2xl tracking-wider animate-fade-in-up"
-                style={{ color: "#14f195", textShadow: "0 0 20px #14f19560, 0 0 40px #14f19530" }}>
-                We are painting the Solana skyline
-              </p>
-            )}
-            {introSlide === 3 && (
-              <div className="animate-fade-in-up">
-                <p className="font-pixel text-[13px] sm:text-[15px] text-dim tracking-[0.3em] uppercase mb-3">Welcome To</p>
-                <h1 className="font-pixel text-4xl sm:text-6xl md:text-7xl tracking-[0.15em]">
-                  <span style={{ color: "#ff69c7", textShadow: "0 0 30px #ff69c780, 0 0 60px #ff69c740" }}>SOL</span>
-                  <span style={{ color: "#ffe45c", textShadow: "0 0 30px #ffe45c80, 0 0 60px #ffe45c40" }}>CITY</span>
-                </h1>
+        <>
+          {/* SKIP button — top right */}
+          <button
+            onClick={() => { setIntroActive(false); setIntroSlide(4); setIntroFading(false); }}
+            className="fixed top-4 right-4 z-[95] font-pixel text-[10px] text-dim/70 hover:text-cream transition-colors pointer-events-auto tracking-widest"
+          >
+            SKIP ▸
+          </button>
+
+          {/* Bottom bar with text slides */}
+          <div
+            className="fixed bottom-0 left-0 right-0 z-[90] transition-opacity duration-700 pointer-events-none"
+            style={{ opacity: introFading ? 0 : 1 }}
+          >
+            <div className="w-full border-t border-border/40" style={{ background: "linear-gradient(180deg, rgba(10,10,15,0.85) 0%, rgba(10,10,15,0.95) 100%)", backdropFilter: "blur(8px)" }}>
+              <div className="flex items-center justify-center py-5 sm:py-7 px-6">
+                {introSlide === 0 && (
+                  <p className="font-pixel text-sm sm:text-lg md:text-xl text-cream/90 tracking-[0.2em] uppercase animate-fade-in-up"
+                    style={{ textShadow: "0 0 20px #ff69c760, 0 0 40px #ff69c730" }}>
+                    On-Chain metrics completely reimagined
+                  </p>
+                )}
+                {introSlide === 1 && (
+                  <p className="font-pixel text-sm sm:text-lg md:text-xl text-cream/90 tracking-[0.2em] uppercase animate-fade-in-up"
+                    style={{ textShadow: "0 0 20px #b44dff60, 0 0 40px #b44dff30" }}>
+                    Every wallet leaves a mark
+                  </p>
+                )}
+                {introSlide === 2 && (
+                  <p className="font-pixel text-sm sm:text-lg md:text-xl tracking-[0.2em] uppercase animate-fade-in-up"
+                    style={{ color: "#14f195", textShadow: "0 0 20px #14f19560, 0 0 40px #14f19530" }}>
+                    We are painting the Solana skyline
+                  </p>
+                )}
+                {introSlide === 3 && (
+                  <div className="animate-fade-in-up text-center">
+                    <p className="font-pixel text-[11px] sm:text-[13px] text-dim tracking-[0.3em] uppercase mb-2">Welcome To</p>
+                    <h1 className="font-pixel text-3xl sm:text-5xl md:text-6xl tracking-[0.15em]">
+                      <span style={{ color: "#ff69c7", textShadow: "0 0 30px #ff69c780, 0 0 60px #ff69c740" }}>SOL</span>
+                      <span style={{ color: "#ffe45c", textShadow: "0 0 30px #ffe45c80, 0 0 60px #ffe45c40" }}>CITY</span>
+                    </h1>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
           <style>{`
             @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
             .animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; }
           `}</style>
-        </div>
+        </>
       )}
 
-      {/* ═══ TOP 5 LEADERBOARD (desktop only, not during intro/fly/splash) ═══ */}
+      {/* ═══ TOP 5 LEADERBOARD (desktop only, bottom-right, not during intro/fly/splash) ═══ */}
       {!isMobile && !introActive && !isFlyMode && cityPreview && splashDone && introSlide > 3 && !showDatabase && (
-        <div className="fixed top-14 left-4 z-40 transition-opacity duration-500" style={{ opacity: hudVisible || (!showVerifyPanel && !showHowItWorks && !showAdsPanel) ? 0.95 : 0 }}>
+        <div className="fixed bottom-4 right-4 z-40 transition-opacity duration-500" style={{ opacity: (!showVerifyPanel && !showHowItWorks && !showAdsPanel && !selectedBuilding) ? 0.95 : 0 }}>
           <div className="bg-bg/70 backdrop-blur-md border border-border/30 rounded-sm p-2.5 min-w-[200px]">
             {seedCity
               .slice()
@@ -700,7 +713,7 @@ export default function Home() {
       </nav>
 
       {/* ═══ EXPLORE MODE SEARCH BAR ═══ */}
-      {!hudVisible && !isFlyMode && !showVerifyPanel && !selectedBuilding && (
+      {!hudVisible && !isFlyMode && !introActive && !showVerifyPanel && !selectedBuilding && (
         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 w-full max-w-xs px-4">
           <div className="flex items-stretch border border-[#b44dff]/40 bg-bg/80 backdrop-blur-md rounded-sm overflow-hidden">
             <input
@@ -930,7 +943,7 @@ export default function Home() {
       )}
 
       {/* ═══ EXPLORE MODE — CENTER EXIT BUTTON ═══ */}
-      {!hudVisible && !isFlyMode && !showVerifyPanel && !selectedBuilding && (
+      {!hudVisible && !isFlyMode && !introActive && !showVerifyPanel && !selectedBuilding && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
           <button
             onClick={() => { setShowHud(true); setSelectedBuilding(null); setFocusedBuildingLogin(null); }}
