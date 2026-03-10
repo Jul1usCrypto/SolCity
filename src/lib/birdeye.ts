@@ -9,6 +9,34 @@ import "server-only";
 
 const BIRDEYE_BASE = "https://public-api.birdeye.so";
 
+// ─── Rate limiter: 60 RPM = max 1 request per 1.1s ──────────
+let _lastBirdeyeCall = 0;
+const _birdeyeQueue: Array<{ resolve: () => void }> = [];
+let _birdeyeProcessing = false;
+
+async function birdeyeThrottle(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    _birdeyeQueue.push({ resolve });
+    if (!_birdeyeProcessing) processBirdeyeQueue();
+  });
+}
+
+async function processBirdeyeQueue() {
+  _birdeyeProcessing = true;
+  while (_birdeyeQueue.length > 0) {
+    const next = _birdeyeQueue.shift()!;
+    const now = Date.now();
+    const elapsed = now - _lastBirdeyeCall;
+    const minGap = 1100; // 1.1s between calls = ~54 RPM
+    if (elapsed < minGap) {
+      await new Promise(r => setTimeout(r, minGap - elapsed));
+    }
+    _lastBirdeyeCall = Date.now();
+    next.resolve();
+  }
+  _birdeyeProcessing = false;
+}
+
 export interface BirdeyePnlSummary {
   uniqueTokens: number;
   totalBuy: number;
@@ -36,6 +64,9 @@ export async function fetchBirdeyePnl(walletAddress: string): Promise<BirdeyePnl
   if (!apiKey) return null;
 
   try {
+    // Wait for rate limiter slot
+    await birdeyeThrottle();
+
     const url = `${BIRDEYE_BASE}/wallet/v2/pnl/summary?wallet=${walletAddress}`;
     const res = await fetch(url, {
       method: "GET",

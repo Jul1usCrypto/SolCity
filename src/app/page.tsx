@@ -652,8 +652,14 @@ export default function Home() {
 
       {/* ═══ TOP 5 LEADERBOARD (desktop only, bottom-right, not during intro/fly/splash) ═══ */}
       {!isMobile && !introActive && !isFlyMode && cityPreview && splashDone && introSlide > 3 && !showDatabase && (
-        <div className="fixed bottom-4 right-4 z-40 transition-opacity duration-500" style={{ opacity: (!showVerifyPanel && !showHowItWorks && !showAdsPanel && !selectedBuilding) ? 0.95 : 0 }}>
+        <div className="fixed bottom-12 right-4 z-40 transition-opacity duration-500" style={{ opacity: (!showVerifyPanel && !showHowItWorks && !showAdsPanel && !selectedBuilding) ? 0.95 : 0 }}>
           <div className="bg-bg/70 backdrop-blur-md border border-border/30 rounded-sm p-2.5 min-w-[200px]">
+            <button
+              onClick={() => { setShowDatabase(true); setSelectedBuilding(null); setShowHud(false); }}
+              className="font-pixel text-[7px] text-[#b44dff]/50 hover:text-[#b44dff] transition-colors mb-1.5 w-full text-center tracking-widest uppercase"
+            >
+              show all ▸
+            </button>
             {seedCity
               .slice()
               .sort((a, b) => b.pnlUsd - a.pnlUsd)
@@ -676,12 +682,6 @@ export default function Home() {
                   </button>
                 );
               })}
-            <button
-              onClick={() => { setShowDatabase(true); setSelectedBuilding(null); setShowHud(false); }}
-              className="font-pixel text-[8px] text-[#b44dff]/70 hover:text-[#b44dff] transition-colors mt-1 w-full text-center tracking-wider"
-            >
-              SHOW ALL ▸
-            </button>
           </div>
         </div>
       )}
@@ -944,7 +944,7 @@ export default function Home() {
 
       {/* ═══ EXPLORE MODE — CENTER EXIT BUTTON ═══ */}
       {!hudVisible && !isFlyMode && !introActive && !showVerifyPanel && !selectedBuilding && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+        <div className="fixed bottom-14 left-1/2 -translate-x-1/2 z-50">
           <button
             onClick={() => { setShowHud(true); setSelectedBuilding(null); setFocusedBuildingLogin(null); }}
             className="btn-press px-6 py-2.5 text-[10px] font-pixel font-bold text-black rounded-sm"

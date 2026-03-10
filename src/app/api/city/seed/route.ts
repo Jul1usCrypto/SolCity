@@ -19,8 +19,10 @@ export async function GET() {
   }
 
   try {
-    // Fetch all KOL wallets in smaller chunks to reduce rate-limit failures.
+    // Fetch wallets in chunks. Birdeye calls are rate-limited internally
+    // (1 req/1.1s via birdeye.ts queue), so we can safely run Helius in parallel.
     const CHUNK_SIZE = 8;
+    const CHUNK_DELAY_MS = 500; // small gap for Helius courtesy
     const liveByAddress = new Map<string, WalletMetrics>();
 
     for (let i = 0; i < KOL_WALLETS.length; i += CHUNK_SIZE) {
@@ -38,9 +40,9 @@ export async function GET() {
       });
       console.log(`[seed] Chunk ${Math.floor(i/CHUNK_SIZE)+1}: ${fulfilled}/${chunk.length} wallets fetched`);
 
-      // Small delay between chunks to avoid Birdeye rate limits
+      // Delay between chunks to respect Birdeye 60 RPM rate limit
       if (i + CHUNK_SIZE < KOL_WALLETS.length) {
-        await new Promise(r => setTimeout(r, 1200));
+        await new Promise(r => setTimeout(r, CHUNK_DELAY_MS));
       }
     }
     console.log(`[seed] Total live: ${liveByAddress.size}/${KOL_WALLETS.length}`);
