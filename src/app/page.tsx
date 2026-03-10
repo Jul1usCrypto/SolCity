@@ -327,14 +327,14 @@ export default function Home() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Splash screen: minimum 3 seconds before fading out
-  // Reset on every mount (including HMR Fast Refresh)
+  // Splash screen: brief loading state while JS hydrates + 3D initializes
+  // Data loads instantly from hardcoded snapshot, so we only need ~1s
   useEffect(() => {
     setSplashDone(false);
     setIntroActive(false);
     setIntroSlide(-1);
     setIntroFading(false);
-    const timer = setTimeout(() => setSplashDone(true), 3000);
+    const timer = setTimeout(() => setSplashDone(true), 1200);
     return () => clearTimeout(timer);
   }, []);
 
