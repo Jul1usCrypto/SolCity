@@ -35,8 +35,8 @@ interface WalletMetrics {
 
 const SOCIAL_LINKS = {
   x: "https://x.com/SolC1ty",
-  chart: "https://dexscreener.com/",
-  buy: "https://pump.fun/",
+  chart: "https://dexscreener.com/solana/g7euqazyjzegmrwasnqa6lsnrkkf3cpluxqtjzkq3hhf",
+  buy: "https://pump.fun/coin/73hqTnc95a1Tjb5mwsmHu9CFUKqHngh7u6BmunFxpump",
 };
 
 const DONATION_WALLET = "5t997b4cWJLE8ESeCUNw9E37vjZC5B7rUcyx9TtxNQGu";
